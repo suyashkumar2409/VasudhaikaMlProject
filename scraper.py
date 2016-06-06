@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
 import os
-
+import codecs
 def getPath():
     return "/home/vasudhaika/Desktop/classifiednews"
 
@@ -9,6 +9,7 @@ def pathconcat(path1,folder):
     return path1+ "/" + folder
 
 def adddirectory(currpath):
+
     newpath = currpath
 
     if not os.path.exists(newpath):
@@ -16,7 +17,8 @@ def adddirectory(currpath):
 
 
 def makefile(name,body,currpath):
-    file = open(pathconcat(currpath,name), "a")
+    file = codecs.open(pathconcat(currpath,name), "a", "utf-8")
+    #file = os.open(pathconcat(currpath,name), os.O_APPEND)
     file.write(body)
     file.close()
 
@@ -32,9 +34,12 @@ def main(site):
         hometable = homesoup.find_all('table','cat_under')[0]
 
         for a in hometable.find_all('a','minicat'):
-            commodity = requests.get(a.attrs['href'])
+            commodity = requests.get(a.attrs['href'])#.text.encode('utf-8').decode('ascii', 'ignore')
             commoditysoup = BeautifulSoup(commodity.content)
             commodityname = commoditysoup.find_all('font','whiteheadlarge')[0].getText()
+
+            if commodityname == "Commodities":
+                continue
 
             print("Scraping Commodity "+commodityname)
             currpath = pathconcat(getPath(),commodityname)
@@ -48,7 +53,7 @@ def main(site):
 
             articlenum = 0
             for link in newslist:
-                newspage = requests.get(link)
+                newspage = requests.get(link)#.text.encode('utf-8').decode('ascii', 'ignore')
                 newspagesoup = BeautifulSoup(newspage.content)
 
                 title = newspagesoup.find_all('font','blackheadlarge')[0].getText()
@@ -57,7 +62,7 @@ def main(site):
                # print(len(plist))
                 body = title
                 for p in plist:
-                    body = body + str(p.getText())
+                    body = body + " " + p.text
                    # print(p.text)
                 print("************Scraping article "+str(articlenum)+" of "+ str(len(newslist))+" articles")
                 makefile(str(articlenum) + ".txt",body,currpath)
