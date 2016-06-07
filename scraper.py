@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 import requests
 import os
 import codecs
+import re
 def getPath():
     return "/home/vasudhaika/Desktop/classifiednews"
 
@@ -20,6 +21,7 @@ def makefile(name,body,currpath):
     file = codecs.open(pathconcat(currpath,name), "a", "utf-8")
     #file = os.open(pathconcat(currpath,name), os.O_APPEND)
     file.write(body)
+    #print(body)
     file.close()
 
 def urlconcat(base,sub):
@@ -31,11 +33,11 @@ def updatelog(currpath, pagenum, articlenum, read):
         articlenum = 0
         pagenum = 0
         file = codecs.open(filename, "w", "utf-8")
-        body = str(pagenum)+ " " + str(articlenum)
+        body = str(pagenum)+ "\n" + str(articlenum)
         file.write(body)
         file.close()
 
-        print("/n/n%%%%%%%%Creating Log File/n")
+        print("\n\n%%%%%%%%Creating Log File\n")
 
         return pagenum, articlenum
     elif read==False:
@@ -43,17 +45,17 @@ def updatelog(currpath, pagenum, articlenum, read):
         body = str(pagenum) + "/n" + str(articlenum)
         file.write(body)
         file.close()
-        print("/n/n%%%%%%%%Updating Log File/n")
+        print("\n\n%%%%%%%%Updating Log File\n")
 
         return pagenum, articlenum
 
     else:
         file = codecs.open(filename, "r", "utf-8")
         content = file.readlines()
-
-        pagenum = content[0]
+        #print(content)
+        pagenum = int(content[0].replace('\n', ''))
         articlenum = pagenum*50
-        print("/n/n%%%%%%%%Reading Log File/n")
+        print("\n\n%%%%%%%%Reading Log File\n")
         return pagenum, articlenum
 
 def agrimoneymain():
@@ -100,6 +102,12 @@ def agrimoneymain():
 
             articlenum = articlenum + 1
 
+def visible(element):
+    if element.parent.name in ['style', 'script', '[document]', 'head', 'title'] :
+        return False
+    elif re.match('<!--.*-->', str(element.encode('utf-8'))) :
+        return False
+    return True
 
 def farmsmain():
     startingurl = "http://www.farms.com/"
@@ -141,22 +149,24 @@ def farmsmain():
                 if currpagenum == pagenum:
                     table = newssitesoup.find_all('table','tableBorderthin')[0]
                     tr = table.find_all('tr')[1]
-
+                  #  print(tr)
                     #alllinks = tr.find_all('a')
 
                     allnews = tr.find_all('div',style = 'padding: 2px 0px; display: block;')
+                  #  print(allnews)
                     #pagenum, articlenum = updatelog(currpath, pagenum, articlenum, read=True)
 
                     for news in allnews:
                         newslink = news.a['href']
-                        newspage = requests.get(newslink)
-                        newspagesoup =  BeautifulSoup(newspage)
+                        newspage = requests.get(urlconcat(startingurl,newslink))
+                        newspagesoup =  BeautifulSoup(newspage.content)
 
-                        allparas = newspagesoup.find_all('table','tableBorderthin')[0].find_all('tr')[1].find_all('p')
+                        totaltext = newspagesoup.find_all('table','tableBorderthin')[0].text
+                        #print(allparas)
+                        #allparas = filter(visible, allparas)
 
-                        totaltext = ""
-                        for para in allparas:
-                            totaltext = totaltext + para.text
+                        #for para in allparas:
+                         #   totaltext = totaltext + para
 
                         makefile(str(articlenum) + '.txt', totaltext, currpath)
 
