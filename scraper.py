@@ -42,7 +42,7 @@ def updatelog(currpath, pagenum, articlenum, read):
         return pagenum, articlenum
     elif read==False:
         file = codecs.open(filename, "w", "utf-8")
-        body = str(pagenum) + "/n" + str(articlenum)
+        body = str(pagenum) + "\n" + str(articlenum)
         file.write(body)
         file.close()
         print("\n\n%%%%%%%%Updating Log File\n")
@@ -142,10 +142,13 @@ def farmsmain():
             articlenum  = 0
             pagenum = 0
 
-            pagenum, articlenum = updatelog(currpath, pagenum, articlenum, read=True)
-
             currpagenum = 0
+            pagenum, articlenum = updatelog(currpath, pagenum, articlenum, read=True)
+            #print(pagenum)
+            #print(currpagenum)
+
             while morepages:
+                #print("ina loop")
                 if currpagenum == pagenum:
                     table = newssitesoup.find_all('table','tableBorderthin')[0]
                     tr = table.find_all('tr')[1]
@@ -181,9 +184,9 @@ def farmsmain():
                 for anchor in nextpageanchors:
                     if anchor.text == ' > ':
                         nextpage = anchor['href']
-
+                #print((nextpage))
                 if nextpage:
-                    newssite = requests.get(urlconcat(startingurl,nextpage))
+                    newssite = requests.get((nextpage))
                     newssitesoup = BeautifulSoup(newssite.content)
                     if currpagenum == pagenum:
                         pagenum = pagenum + 1
