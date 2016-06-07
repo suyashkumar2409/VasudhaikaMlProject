@@ -25,6 +25,37 @@ def makefile(name,body,currpath):
 def urlconcat(base,sub):
     return base+sub
 
+def updatelog(currpath, pagenum, articlenum, read):
+    filename = pathconcat(currpath, "log.txt")
+    if not os.path.exists(filename):
+        articlenum = 0
+        pagenum = 0
+        file = codecs.open(filename, "w", "utf-8")
+        body = str(pagenum)+ " " + str(articlenum)
+        file.write(body)
+        file.close()
+
+        print("/n/n%%%%%%%%Creating Log File/n")
+
+        return pagenum, articlenum
+    elif read==False:
+        file = codecs.open(filename, "w", "utf-8")
+        body = str(pagenum) + "/n" + str(articlenum)
+        file.write(body)
+        file.close()
+        print("/n/n%%%%%%%%Updating Log File/n")
+
+        return pagenum, articlenum
+
+    else:
+        file = codecs.open(filename, "r", "utf-8")
+        content = file.readlines()
+
+        pagenum = content[0]
+        articlenum = pagenum*50
+        print("/n/n%%%%%%%%Reading Log File/n")
+        return pagenum, articlenum
+
 def agrimoneymain():
     startingurl = "http://www.agrimoney.com/1/commodities/"
 
@@ -76,6 +107,8 @@ def farmsmain():
     home = requests.get(startingurl)
     homesoup = BeautifulSoup(home.content)
 
+    print("Going to farms.com")
+
     allcrops = homesoup.find_all('div','Leftpanel')[0].find_all('li','p4')[0].find_all('a', 'Leftlinks')
 
     avoidcrops = ['Field Guide','Yield Data Centre']
@@ -85,43 +118,70 @@ def farmsmain():
         if cropname not in avoidcrops:
             foldername = cropname + "_farms"
 
+            print("########Scraping commodity "+ cropname)
+
             currpath = pathconcat(getPath(),foldername)
             adddirectory(currpath)
 
             newssite = requests.get(urlconcat(startingurl, crop['href']))
             newssitesoup = BeautifulSoup(newssite.content)
 
-            newssite = requests.get((newssitesoup.find_all('div',id = 'ctl00_more_link_SubPage')[0].find_all('a')[0])['href'])
+            newssite = requests.get(urlconcat(startingurl,newssitesoup.find_all('div', id='ctl00_more_link_SubPage')[0].find_all('a')[0]['href']))
             newssitesoup = BeautifulSoup(newssite.content)
 
-            table = newssitesoup.find_all('table','tableBorderthin')[0]
-            tr = table.find_all('tr')[1]
+            ####################The actual site with all news articles###########################################################################
+            morepages = True
+            articlenum  = 0
+            pagenum = 0
 
-            #alllinks = tr.find_all('a')
+            pagenum, articlenum = updatelog(currpath, pagenum, articlenum, read=True)
 
-            allnews = tr.find_all('div',style = 'padding: 2px 0px; display: block;')
+            currpagenum = 0
+            while morepages:
+                if currpagenum == pagenum:
+                    table = newssitesoup.find_all('table','tableBorderthin')[0]
+                    tr = table.find_all('tr')[1]
 
-            articlenum = 0
+                    #alllinks = tr.find_all('a')
+
+                    allnews = tr.find_all('div',style = 'padding: 2px 0px; display: block;')
+                    #pagenum, articlenum = updatelog(currpath, pagenum, articlenum, read=True)
+
+                    for news in allnews:
+                        newslink = news.a['href']
+                        newspage = requests.get(newslink)
+                        newspagesoup =  BeautifulSoup(newspage)
+
+                        allparas = newspagesoup.find_all('table','tableBorderthin')[0].find_all('tr')[1].find_all('p')
+
+                        totaltext = ""
+                        for para in allparas:
+                            totaltext = totaltext + para.text
+
+                        makefile(str(articlenum) + '.txt', totaltext, currpath)
+
+                        print("****************Scraping article "+str(articlenum)+" on page "+str(pagenum))
+                        #pagenum, articlenum = updatelog(currpath, articlenum, pagenum)
 
 
-            for news in allnews:
-                newslink = news.a['href']
-                newspage = requests.get(newslink)
-                newspagesoup =  BeautifulSoup(newspage)
+                        articlenum = articlenum + 1
 
-                allparas = newspagesoup.find_all('table','tableBorderthin')[0].find_all('tr')[1].find_all('p')
+                nextpageanchors = newssitesoup.find_all('div',id='dnn_ctr2314_ShowNewsUpdated_dvNewsAnchor')[0].find_all('a')
+                nextpage = None
+                for anchor in nextpageanchors:
+                    if anchor.text == ' > ':
+                        nextpage = anchor['href']
 
-                totaltext = ""
-                for para in allparas:
-                    totaltext = totaltext + para.text
+                if nextpage:
+                    newssite = requests.get(urlconcat(startingurl,nextpage))
+                    newssitesoup = BeautifulSoup(newssite.content)
+                    if currpagenum == pagenum:
+                        pagenum = pagenum + 1
+                        pagenum, articlenum = updatelog(currpath, pagenum, articlenum, read = False)
+                    currpagenum = currpagenum+1
 
-                makefile(str(articlenum) + '.txt', totaltext, currpath)
-                
-            nextpage =
-
-
-
-
+                else:
+                    morepages = False
 
 
 def main(site):
