@@ -27,6 +27,29 @@ def makefile(name,body,currpath):
 def urlconcat(base,sub):
     return base+sub
 
+def updatecrop(currpath, cropname, read = True):
+    filename = pathconcat(currpath,"cropsdone.txt")
+    if not os.path.exists(filename):
+        file = codecs.open(filename,'w', "utf-8")
+        print("^^^^^^^^^Creating done crops file")
+        file.close()
+        return None
+    elif read:
+        print("^^^^^^^^^Reading done crops file")
+        file = codecs.open(filename, 'r', 'utf-8')
+        crops = file.readlines()
+        print(crops)
+        crops = [crop.replace('\n','') for crop in crops]
+        print crops
+        file.close()
+        return crops
+    else:
+        print('^^^^^^^^^^Updating done crops file')
+        file = codecs.open(filename, 'a', 'utf-8')
+        file.write(cropname+"\n")
+        file.close()
+
+
 def updatelog(currpath, pagenum, articlenum, read):
     filename = pathconcat(currpath, "log.txt")
     if not os.path.exists(filename):
@@ -121,6 +144,11 @@ def farmsmain():
 
     avoidcrops = ['Field Guide','Yield Data Centre']
 
+    donecrops = updatecrop(getPath(),None,True)
+    if donecrops !=None:
+        avoidcrops = avoidcrops + donecrops
+   # print donecrops
+    #print
     for crop in allcrops:
         cropname = crop.text
         if cropname not in avoidcrops:
@@ -163,8 +191,10 @@ def farmsmain():
                         newslink = news.a['href']
                         newspage = requests.get(urlconcat(startingurl,newslink))
                         newspagesoup =  BeautifulSoup(newspage.content)
-
-                        totaltext = newspagesoup.find_all('table','tableBorderthin')[0].text
+                        try:
+                            totaltext = newspagesoup.find_all('table','tableBorderthin')[0].text
+                        except:
+                            continue
                         #print(allparas)
                         #allparas = filter(visible, allparas)
 
@@ -191,10 +221,16 @@ def farmsmain():
                     if currpagenum == pagenum:
                         pagenum = pagenum + 1
                         pagenum, articlenum = updatelog(currpath, pagenum, articlenum, read = False)
+                    else:
+                        print('_________Skipping read articles on page '+str(currpagenum))
                     currpagenum = currpagenum+1
+
 
                 else:
                     morepages = False
+                    donecrops = updatecrop(currpath, cropname, read=False)
+        else:
+            print("!!!!!!!!Skipping commodity "+ cropname)
 
 
 def main(site):
